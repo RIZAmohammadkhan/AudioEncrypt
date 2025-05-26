@@ -1,45 +1,402 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Audio Encrypter/Decrypter</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Audio Encryptor/Decryptor</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 2rem auto;
+      background-color: #1e1e1e;
+      color: #eee;
+    }
+
+    h1 {
+      text-align: center;
+      color: #ccc;
+    }
+
+    #controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    button, input[type="file"], input[type="password"] {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+
+    input[type="password"] {
+      flex: 1;
+      background-color: #2a2a2a;
+      color: #eee;
+      border: 1px solid #444;
+    }
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      color: white;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #record-button.recording {
+      background-color: #e53935;
+    }
+
+    #record-button:not(.recording) {
+      background-color: #1e88e5;
+    }
+
+    #play-button.playing {
+      background-color: #555;
+    }
+
+    #play-button:not(.playing) {
+      background-color: #43a047;
+    }
+
+    #save-image-button {
+      background-color: #6d4c41;
+    }
+
+    #save-audio-button {
+      background-color: #8e24aa;
+    }
+
+    input[type="file"] {
+      background-color: #2a2a2a;
+      color: #ccc;
+      cursor: pointer;
+    }
+
+    #waveform-image-display {
+      width: 100%;
+      height: 300px;
+      border: 2px dashed #444;
+      background: #121212;
+      border-radius: 8px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      transition: border-color 0.3s ease;
+    }
+
+    #waveform-image-display.dragover {
+      border-color: #888;
+    }
+
+    #waveform-image-display canvas {
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+    }
+
+    #waveform-image-display p {
+      position: absolute;
+      text-align: center;
+      color: #777;
+      font-style: italic;
+    }
+
+    #audio-player {
+      width: 100%;
+      margin-bottom: 1rem;
+    }
+  </style>
 </head>
 <body>
-    <div class="main-container">
-        <div class="key-input-container" style="margin-bottom: 20px; padding: 10px; background-color: #282828; border-radius: 5px; text-align: center;">
-            <label for="secret-key-input" style="margin-right: 10px; font-weight: bold;">Secret Key:</label>
-            <input type="password" id="secret-key-input" name="secret-key-input" style="padding: 8px; border-radius: 3px; border: 1px solid #555; background-color: #333; color: #fff;">
-        </div>
-        <section id="encrypter-section">
-            <h2>Encrypter</h2>
-            <button id="record-button">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="vertical-align: middle; margin-right: 5px;"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15a1 1 0 0 0-.98-.85c-.61 0-1.09.54-1 1.14.49 3.17 2.98 5.71 6 5.71s5.51-2.54 6-5.71c.09-.6-.39-1.14-1-1.14z"/><path d="M12 19c-1.18 0-2.34-.21-3.43-.63-.43-.16-.66-.63-.49-1.06.16-.43.63-.66 1.06-.49C10.22 17.2 11.08 17 12 17s1.78.2 2.85.87c.43.16.66.63.49 1.06-.16.43-.63.66-1.06.49A5.99 5.99 0 0 1 12 19z"/></svg>
-                Record Audio
-            </button>
-            <p style="text-align: center; color: #ccc; font-size: 0.9em; margin-bottom: 5px; margin-top: 15px;">Encrypted Data Pattern:</p>
-            <div id="waveform-image-display">
-                <!-- Initial message can be set here or by JS -->
-                <p style="color:#777; text-align: center; padding-top: 80px;">Click "Record Audio" to begin.</p>
-            </div>
-        </section>
-        <section id="decrypter-section">
-            <h2>Decrypter</h2>
-            <input type="file" id="image-upload" accept="image/png" style="margin-bottom: 10px;">
-            <div class="controls" style="display: flex; gap: 10px; margin-bottom:10px;">
-                <button id="play-button" disabled>
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="vertical-align: middle; margin-right: 5px;"><path d="M8 5v14l11-7z"/></svg>
-                    Play Decrypted Audio
-                </button>
-                <button id="save-image-button" disabled>
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="vertical-align: middle; margin-right: 5px;"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                    Save Encrypted Image
-                </button>
-            </div>
-            <audio id="reconstructed-audio-player" style="display: none;"></audio>
-        </section>
-    </div>
-    <script src="script.js"></script>
+  <h1>🔐 Audio Encryptor / Decryptor</h1>
+  <div id="controls">
+    <input type="password" id="secret-key-input" placeholder="Enter Secret Key" />
+    <button id="record-button"><i class="fas fa-microphone"></i> Record</button>
+    <button id="play-button" disabled><i class="fas fa-lock-open"></i>Decrypt</button>
+    <button id="save-audio-button" disabled><i class="fas fa-file-audio"></i> Save Audio</button>
+    <button id="save-image-button" disabled><i class="fas fa-download"></i> Save Image</button>
+    <label for="image-upload" style="display:flex; align-items:center; gap:0.5rem; background:#2a2a2a; padding:0.5rem 1rem; border-radius:6px; cursor:pointer;">
+      <i class="fas fa-paperclip"></i> Browse
+      <input type="file" id="image-upload" accept="image/png" style="display:none;">
+    </label>
+  </div>
+  <div id="waveform-image-display"></div>
+  <audio id="audio-player" controls style="display:none;"></audio>
+
+  <script>
+    let lastRecordedSampleRate = 44100;
+    let globalPlaybackContext = null;
+    let lastDecryptedBuffer = null;
+
+    function getUserSecretKey() {
+      return document.getElementById('secret-key-input').value.trim();
+    }
+
+    async function deriveKey(passphrase) {
+      const encoder = new TextEncoder();
+      const salt = encoder.encode('unique-app-salt');
+      const keyMaterial = await crypto.subtle.importKey(
+        'raw', encoder.encode(passphrase), { name: 'PBKDF2' }, false, ['deriveKey']
+      );
+      return crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 }, false,
+        ['encrypt','decrypt']
+      );
+    }
+
+    async function encryptAudioToImage(audioBuffer, container) {
+      const pass = getUserSecretKey(); if (!pass) throw 'Key required';
+      const channelData = audioBuffer.getChannelData(0);
+      const payloadRaw = channelData.buffer;
+      const key = await deriveKey(pass);
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const cipher = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, payloadRaw);
+      const cipherBytes = new Uint8Array(cipher);
+      const header = new Uint8Array(16);
+      header.set(iv,0);
+      new DataView(header.buffer).setUint32(12, cipherBytes.length, false);
+      const total = header.byteLength + cipherBytes.length;
+      const payload = new Uint8Array(total);
+      payload.set(header,0);
+      payload.set(cipherBytes, header.byteLength);
+
+      const w = Math.ceil(Math.sqrt(total));
+      const h = Math.ceil(total / w);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      const img = ctx.createImageData(w,h);
+      for (let i=0; i<total; i++) {
+        const idx = i*4;
+        img.data[idx] = payload[i];
+        img.data[idx+1] = 0;
+        img.data[idx+2] = 0;
+        img.data[idx+3] = 255;
+      }
+      ctx.putImageData(img,0,0);
+      container.innerHTML = ''; 
+      container.appendChild(canvas);
+      return canvas;
+    }
+
+    async function decryptImageToAudio(canvas) {
+      const pass = getUserSecretKey(); if (!pass) throw 'Key required';
+      const ctx = canvas.getContext('2d');
+      const { data, width, height } = ctx.getImageData(0,0,canvas.width,canvas.height);
+      const total = width * height;
+      const payload = new Uint8Array(total);
+      for (let i=0; i<total; i++) payload[i] = data[i*4];
+
+      const iv = payload.slice(0,12);
+      const len = new DataView(payload.buffer).getUint32(12,false);
+      const cipher = payload.slice(16,16+len).buffer;
+      const key = await deriveKey(pass);
+      let raw;
+      try {
+        raw = await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, cipher);
+      } catch {
+        raw = cipher;
+      }
+
+      const floatArr = new Float32Array(raw);
+      const ac = globalPlaybackContext || (globalPlaybackContext = new AudioContext());
+      const buf = ac.createBuffer(1, floatArr.length, lastRecordedSampleRate);
+      buf.copyToChannel(floatArr,0);
+      lastDecryptedBuffer = buf;
+      return buf;
+    }
+
+    function bufferToWav(buffer) {
+      const numChan = buffer.numberOfChannels;
+      const len = buffer.length * numChan * 2 + 44;
+      const view = new DataView(new ArrayBuffer(len));
+      function writeString(offset, str) {
+        for (let i=0; i<str.length; i++) view.setUint8(offset+i, str.charCodeAt(i));
+      }
+      writeString(0, 'RIFF');
+      view.setUint32(4, len - 8, true);
+      writeString(8, 'WAVE');
+      writeString(12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, numChan, true);
+      view.setUint32(24, buffer.sampleRate, true);
+      view.setUint32(28, buffer.sampleRate * numChan * 2, true);
+      view.setUint16(32, numChan * 2, true);
+      view.setUint16(34, 16, true);
+      writeString(36, 'data');
+      view.setUint32(40, len - 44, true);
+      let offset = 44;
+      for (let i=0; i<buffer.length; i++){
+        for (let c=0; c<numChan; c++){
+          const sample = buffer.getChannelData(c)[i];
+          const s = Math.max(-1, Math.min(1, sample));
+          view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+          offset += 2;
+        }
+      }
+      return new Blob([view], { type: 'audio/wav' });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const recordBtn = document.getElementById('record-button');
+      const playBtn   = document.getElementById('play-button');
+      const saveImageBtn = document.getElementById('save-image-button');
+      const saveAudioBtn = document.getElementById('save-audio-button');
+      const upload    = document.getElementById('image-upload');
+      const display   = document.getElementById('waveform-image-display');
+      const audioEl   = document.getElementById('audio-player');
+      let recorderCtx = null;
+      let isPlaying = false;
+
+      recordBtn.onclick = async () => {
+        if (!getUserSecretKey()) { alert('Enter secret key'); return; }
+        if (recordBtn.classList.contains('recording')) {
+          const buf = await recorderCtx.stop();
+          lastRecordedSampleRate = buf.sampleRate;
+          await encryptAudioToImage(buf, display);
+          playBtn.disabled = saveImageBtn.disabled = saveAudioBtn.disabled = false;
+          recordBtn.classList.remove('recording');
+          recordBtn.innerHTML = `<i class="fas fa-microphone"></i> Record`;
+        } else {
+          playBtn.disabled = saveImageBtn.disabled = saveAudioBtn.disabled = true;
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          const audioCtx = new AudioContext();
+          const source = audioCtx.createMediaStreamSource(stream);
+          const proc = audioCtx.createScriptProcessor(4096,1,1);
+          let chunks = [];
+          proc.onaudioprocess = e => chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+          source.connect(proc);
+          recorderCtx = {
+            stop: () => new Promise(res => {
+              source.disconnect(proc);
+              stream.getTracks().forEach(t=>t.stop());
+              const len = chunks.reduce((a,c)=>a+c.length,0);
+              const merged = new Float32Array(len);
+              let off=0;
+              for(const c of chunks){ merged.set(c,off); off+=c.length; }
+              const out = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+              out.copyToChannel(merged,0);
+              audioCtx.close();
+              res(out);
+            })
+          };
+          recordBtn.classList.add('recording');
+          recordBtn.innerHTML = `<i class="fas fa-microphone-slash"></i> Stop Recording`;
+        }
+      };
+
+      playBtn.onclick = async () => {
+        const canvas = display.querySelector('canvas');
+        if(!canvas) return alert('No image to decrypt');
+        if(!isPlaying) {
+          isPlaying = true;
+          playBtn.classList.add('playing');
+          const buf = await decryptImageToAudio(canvas);
+          const wavBlob = bufferToWav(buf);
+          audioEl.src = URL.createObjectURL(wavBlob);
+          audioEl.style.display = '';
+          audioEl.play();
+          saveAudioBtn.onclick = () => {
+            const a = document.createElement('a');
+            a.href = audioEl.src;
+            a.download = 'decrypted-audio.wav';
+            a.click();
+          };
+          playBtn.classList.remove('playing');
+          isPlaying = false;
+        } else {
+          audioEl.pause();
+          playBtn.classList.remove('playing');
+          isPlaying = false;
+        }
+      };
+
+      saveImageBtn.onclick = () => {
+        const canvas = display.querySelector('canvas');
+        if(!canvas) return alert('No pattern to save');
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = 'encrypted-pattern.png';
+        a.click();
+      };
+
+      upload.onchange = e => {
+        const file = e.target.files[0];
+        if(file && file.type==='image/png'){
+          const reader = new FileReader();
+          reader.onload = ev=>{
+            const img = new Image();
+            img.onload = ()=>{
+              display.innerHTML='';
+              const c = document.createElement('canvas');
+              c.width=img.width; c.height=img.height;
+              c.getContext('2d').drawImage(img,0,0);
+              display.appendChild(c);
+              playBtn.disabled = saveImageBtn.disabled = saveAudioBtn.disabled = false;
+            };
+            img.src = ev.target.result;
+          };
+          reader.readAsDataURL(file);
+        } else alert('Select a PNG');
+      };
+
+      // Drag-and-drop support
+      display.addEventListener('dragover', e => {
+        e.preventDefault();
+        display.classList.add('dragover');
+      });
+
+      display.addEventListener('dragleave', () => {
+        display.classList.remove('dragover');
+      });
+
+      display.addEventListener('drop', e => {
+        e.preventDefault();
+        display.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file && file.type === 'image/png') {
+          const reader = new FileReader();
+          reader.onload = ev => {
+            const img = new Image();
+            img.onload = () => {
+              display.innerHTML = '';
+              const c = document.createElement('canvas');
+              c.width = img.width;
+              c.height = img.height;
+              c.getContext('2d').drawImage(img, 0, 0);
+              display.appendChild(c);
+              playBtn.disabled = saveImageBtn.disabled = saveAudioBtn.disabled = false;
+            };
+            img.src = ev.target.result;
+          };
+          reader.readAsDataURL(file);
+        } else {
+          alert('Only PNG images are supported for drop');
+        }
+      });
+
+      if(!display.querySelector('canvas')){
+        display.innerHTML = '<p>Enter key then record or upload PNG to begin</p>';
+      }
+    });
+  </script>
 </body>
 </html>
