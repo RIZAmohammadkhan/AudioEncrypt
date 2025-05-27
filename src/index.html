@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Audio Encryptor/Decryptor</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔐</text></svg>">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <h1>🔐 Audio Encryptor / Decryptor</h1>
+  <div id="error-message-area"></div> <!-- Error display area -->
+  <div id="controls">
+    <div class="password-row">
+      <div class="password-container">
+        <input type="password" id="secret-key-input" placeholder="Enter Strong Secret Key" />
+        <span id="password-strength" class="password-strength"></span>
+      </div>
+    </div>
+    <div class="button-row">
+      <button id="record-button"><i class="fas fa-microphone"></i> Record</button>
+      <label for="audio-upload" class="upload-label">
+        <i class="fas fa-file-audio"></i> Upload Audio
+        <input type="file" id="audio-upload" accept="audio/*" style="display:none;">
+      </label>
+      <button id="play-button" disabled><i class="fas fa-lock-open"></i>Decrypt</button>
+      <button id="save-audio-button" disabled><i class="fas fa-file-audio"></i> Save Audio</button>
+      <button id="save-image-button" disabled><i class="fas fa-download"></i> Save Image</button>
+      <label for="image-upload" class="upload-label">
+        <i class="fas fa-paperclip"></i> Browse Image
+        <input type="file" id="image-upload" accept="image/png" style="display:none;">
+      </label>
+    </div>
+  </div>
+  <div id="waveform-image-display"></div>
+  <audio id="audio-player" controls style="display:none;"></audio>
+
+<script src="js/script.js"></script>
+</body>
+</html>

@@ -1,0 +1,261 @@
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px; /* Default max content width */
+      margin: 2rem auto;
+      background-color: #1e1e1e;
+      color: #eee;
+      padding: 0 1rem; /* Padding inside the body */
+      box-sizing: border-box; /* Ensure padding doesn't add to max-width */
+    }
+
+    h1 {
+      text-align: center;
+      color: #ccc;
+      /* font-size will be 2em by default, adjust in media queries if needed */
+    }
+
+    #error-message-area {
+      background-color: #d32f2f; /* Red for errors */
+      color: white;
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      text-align: center;
+      font-weight: bold;
+      display: none; /* Initially hidden */
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    #controls {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .password-row {
+      display: flex;
+      width: 100%;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap; /* Allow buttons to wrap on medium screens if needed */
+      gap: 0.5rem;
+    }
+
+    button, input[type="file"], input[type="password"], .upload-label {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      border: none; /* Base for button, overridden for input/label */
+      border-radius: 6px;
+      transition: all 0.3s ease;
+      box-sizing: border-box; /* Apply here for consistency */
+    }
+
+    .password-container {
+      width: 100%;
+      position: relative;
+    }
+
+    input[type="password"] {
+      width: 100%; /* Takes full width of .password-container */
+      background-color: #2a2a2a;
+      color: #eee;
+      border: 1px solid #444;
+      padding-right: 4rem; /* box-sizing: border-box handles this */
+    }
+
+    input[type="password"].weak {
+      border-color: #f44336;
+    }
+
+    input[type="password"].medium {
+      border-color: #ff9800;
+    }
+
+    input[type="password"].strong {
+      border-color: #4caf50;
+    }
+
+    .password-strength {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.75rem;
+      font-weight: bold;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .password-strength.weak { color: #f44336; }
+    .password-strength.medium { color: #ff9800; }
+    .password-strength.strong { color: #4caf50; }
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      color: white;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #record-button.recording {
+      background-color: #e53935;
+    }
+
+    #record-button:not(.recording) {
+      background-color: #1e88e5;
+    }
+
+    #play-button.playing {
+      background-color: #555;
+    }
+
+    #play-button:not(.playing) {
+      background-color: #43a047;
+    }
+
+    #save-image-button {
+      background-color: #6d4c41;
+    }
+
+    #save-audio-button {
+      background-color: #8e24aa;
+    }
+
+    .upload-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #2a2a2a;
+      color: #ccc;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      border: 1px solid #444;
+    }
+    .upload-label:hover {
+        background-color: #3a3a3a;
+    }
+
+
+    #waveform-image-display {
+      width: 100%;
+      height: 300px; /* Default height, will be adjusted by media queries */
+      border: 2px dashed #444;
+      background: #121212;
+      border-radius: 8px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      transition: border-color 0.3s ease, height 0.3s ease; /* Added height transition */
+    }
+
+    #waveform-image-display.dragover {
+      border-color: #888;
+    }
+
+    #waveform-image-display canvas {
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+    }
+
+    #waveform-image-display p {
+      position: absolute;
+      text-align: center;
+      color: #777;
+      font-style: italic;
+      padding: 1rem;
+    }
+
+    #audio-player {
+      width: 100%;
+      margin-bottom: 1rem;
+    }
+
+    /* --- Media Queries for Responsiveness --- */
+
+    @media (max-width: 600px) {
+      .button-row {
+        flex-direction: column;
+      }
+      
+      button, .upload-label {
+        width: 100%;
+        justify-content: center; /* Center icon and text within the button */
+      }
+
+      #waveform-image-display {
+        height: 250px; 
+      }
+    }
+
+    @media (max-width: 479.98px) { 
+      body {
+        margin: 1rem; 
+        padding: 0 0.5rem; 
+      }
+      h1 {
+        font-size: 1.5rem; 
+      }
+      button, input[type="file"], input[type="password"], .upload-label {
+        font-size: 0.9rem; 
+        padding: 0.4rem 0.8rem; 
+      }
+      .password-strength { 
+        font-size: 0.65rem;
+        right: 0.5rem;
+      }
+      input[type="password"] { 
+         padding-right: 3.5rem; 
+      }
+      #waveform-image-display {
+        height: 200px; 
+      }
+      #waveform-image-display p {
+        font-size: 0.85rem; 
+        padding: 0.5rem;
+      }
+    }
+
+    @media (min-width: 768px) {
+      body {
+        max-width: 720px; 
+      }
+      #waveform-image-display {
+        height: 350px; 
+      }
+    }
+
+    @media (min-width: 992px) {
+      body {
+        max-width: 900px; 
+      }
+      h1 {
+        font-size: 2.2rem; 
+      }
+      #waveform-image-display {
+        height: 400px; 
+      }
+    }
+
+    @media (min-width: 1200px) {
+      body {
+        max-width: 960px; 
+      }
+      #waveform-image-display {
+        height: 450px; 
+      }
+    }
