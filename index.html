@@ -39,7 +39,7 @@
       gap: 0.5rem;
     }
 
-    button, input[type="file"], input[type="password"] {
+    button, input[type="file"], input[type="password"], .upload-label { /* Added .upload-label here for consistent styling */
       padding: 0.5rem 1rem;
       font-size: 1rem;
       border: none;
@@ -127,23 +127,22 @@
       background-color: #8e24aa;
     }
 
-    input[type="file"] {
-      background-color: #2a2a2a;
-      color: #ccc;
-      cursor: pointer;
-    }
-
+    /* input[type="file"] is hidden, styling is on .upload-label */
     .upload-label {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      background: #2a2a2a;
-      padding: 0.5rem 1rem;
-      border-radius: 6px;
+      background: #2a2a2a; /* Consistent with other inputs */
+      color: #ccc; /* Consistent with other inputs */
       cursor: pointer;
       white-space: nowrap;
       flex-shrink: 0;
+      border: 1px solid #444; /* Added for better visual consistency */
     }
+    .upload-label:hover {
+        background-color: #3a3a3a;
+    }
+
 
     #waveform-image-display {
       width: 100%;
@@ -174,6 +173,7 @@
       text-align: center;
       color: #777;
       font-style: italic;
+      padding: 1rem; /* Add some padding to the placeholder text */
     }
 
     #audio-player {
@@ -204,11 +204,15 @@
     </div>
     <div class="button-row">
       <button id="record-button"><i class="fas fa-microphone"></i> Record</button>
+      <label for="audio-upload" class="upload-label">
+        <i class="fas fa-file-audio"></i> Upload Audio
+        <input type="file" id="audio-upload" accept="audio/*" style="display:none;">
+      </label>
       <button id="play-button" disabled><i class="fas fa-lock-open"></i>Decrypt</button>
       <button id="save-audio-button" disabled><i class="fas fa-file-audio"></i> Save Audio</button>
       <button id="save-image-button" disabled><i class="fas fa-download"></i> Save Image</button>
       <label for="image-upload" class="upload-label">
-        <i class="fas fa-paperclip"></i> Browse
+        <i class="fas fa-paperclip"></i> Browse Image
         <input type="file" id="image-upload" accept="image/png" style="display:none;">
       </label>
     </div>
@@ -265,7 +269,7 @@
       if (strength.score < 2) {
         throw new Error('Password is too weak. Use at least 8 characters with mixed case, numbers, and symbols.');
       }
-      const channelData = audioBuffer.getChannelData(0);
+      const channelData = audioBuffer.getChannelData(0); // Assuming mono, or taking first channel
       const payloadRaw = channelData.buffer;
       const originalSampleRate = audioBuffer.sampleRate;
 
@@ -357,7 +361,7 @@
       const floatArr = new Float32Array(rawDecryptedAudioData);
       const ac = globalPlaybackContext || (globalPlaybackContext = new AudioContext());
       
-      if (sampleRate <= 0 || sampleRate > 192000) {
+      if (sampleRate <= 0 || sampleRate > 192000) { // Common sample rate range
         console.warn(`Invalid sample rate ${sampleRate} detected in image, data might be corrupted.`);
         throw new Error(`Invalid sample rate (${sampleRate}Hz) in image. Data might be corrupted.`);
       }
@@ -394,10 +398,11 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       const recordBtn = document.getElementById('record-button');
+      const audioUploadInput = document.getElementById('audio-upload'); // New
       const playBtn   = document.getElementById('play-button');
       const saveImageBtn = document.getElementById('save-image-button');
       const saveAudioBtn = document.getElementById('save-audio-button');
-      const upload    = document.getElementById('image-upload');
+      const imageUploadInput = document.getElementById('image-upload'); // Renamed for clarity
       const display   = document.getElementById('waveform-image-display');
       const audioEl   = document.getElementById('audio-player');
       const keyInput = document.getElementById('secret-key-input');
@@ -412,13 +417,8 @@
         const pass = getUserSecretKey();
         const strength = checkPasswordStrength(pass);
         const canvas = display.querySelector('canvas');
-        // Only modify playBtn.disabled if not currently playing
-        if (!isPlaying) {
-            if (canvas && pass && strength.score >= 2) {
-                playBtn.disabled = false;
-            } else {
-                playBtn.disabled = true;
-            }
+        if (!isPlaying) { // Only modify playBtn.disabled if not currently playing
+            playBtn.disabled = !(canvas && pass && strength.score >= 2);
         }
       }
       
@@ -428,13 +428,12 @@
         }
         const oldSrc = audioEl.src;
         audioEl.removeAttribute('src');
-        audioEl.load(); // Important to reset the media element state
+        if (audioEl.load) audioEl.load(); // Important to reset the media element state
         audioEl.style.display = 'none';
         if (oldSrc && oldSrc.startsWith('blob:')) {
             URL.revokeObjectURL(oldSrc);
         }
       }
-
 
       keyInput.addEventListener('input', () => {
         const password = keyInput.value;
@@ -458,11 +457,12 @@
             recordBtn.classList.remove('recording');
             recordBtn.innerHTML = `<i class="fas fa-microphone"></i> Record`;
           } else {
-            resetAudioPlayer(); // Reset audio player if user records new audio
-            lastDecryptedBuffer = null; // Clear any previous decrypted buffer
-            saveAudioBtn.disabled = true; // Disable save audio as new recording is being made
-            playBtn.disabled = true; // Disable play until new image is ready
+            resetAudioPlayer(); 
+            lastDecryptedBuffer = null; 
+            saveAudioBtn.disabled = true; 
+            playBtn.disabled = true; 
             saveImageBtn.disabled = true;
+            display.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> Preparing to record...</p>';
 
             audioChunks = [];
             currentStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -471,24 +471,25 @@
             mediaRecorder.onstop = async () => {
               const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
               const arrayBuffer = await audioBlob.arrayBuffer();
-              const tempAudioCtx = new AudioContext();
+              const tempAudioCtx = new AudioContext(); // Use temporary context for decoding
               try {
+                display.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> Encrypting recorded audio...</p>';
                 const decodedAudioBuffer = await tempAudioCtx.decodeAudioData(arrayBuffer);
                 await encryptAudioToImage(decodedAudioBuffer, display);
                 updatePlayButtonState();
                 saveImageBtn.disabled = false;
-                // saveAudioBtn remains disabled as it's for decrypted audio
-                // lastDecryptedBuffer remains null as this is new encrypted data
               } catch (e) {
                 console.error("Error processing recorded audio:", e);
                 alert("Error processing recorded audio: " + e.message);
+                display.innerHTML = getInitialDisplayMessage();
               } finally {
-                await tempAudioCtx.close();
+                await tempAudioCtx.close(); // Close the temporary context
               }
             };
             mediaRecorder.start();
             recordBtn.classList.add('recording');
             recordBtn.innerHTML = `<i class="fas fa-microphone-slash"></i> Stop Recording`;
+            display.innerHTML = '<p>Recording... Click "Stop Recording" when done.</p>';
           }
         } catch (error) {
           console.error('Recording error:', error);
@@ -497,61 +498,111 @@
           recordBtn.innerHTML = `<i class="fas fa-microphone"></i> Record`;
           if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); currentStream = null; }
           if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
+          display.innerHTML = getInitialDisplayMessage();
         }
       };
+
+      // New: Handler for audio file upload
+      audioUploadInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) {
+            e.target.value = null; // Reset file input
+            return;
+        }
+
+        const pass = getUserSecretKey();
+        if (!pass) {
+            alert('Please enter a secret key before uploading audio.');
+            e.target.value = null;
+            return;
+        }
+        const strength = checkPasswordStrength(pass);
+        if (strength.score < 2) {
+            alert('Password is too weak. Please use a stronger password.');
+            e.target.value = null;
+            return;
+        }
+
+        resetAudioPlayer();
+        lastDecryptedBuffer = null;
+        saveAudioBtn.disabled = true;
+        playBtn.disabled = true;
+        saveImageBtn.disabled = true;
+        display.innerHTML = `<p><i class="fas fa-spinner fa-spin"></i> Processing uploaded audio: ${file.name}</p>`;
+
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const tempAudioCtx = new AudioContext(); // Use temporary context for decoding
+            display.innerHTML = `<p><i class="fas fa-spinner fa-spin"></i> Decoding audio: ${file.name}</p>`;
+            const decodedAudioBuffer = await tempAudioCtx.decodeAudioData(arrayBuffer);
+            
+            display.innerHTML = `<p><i class="fas fa-spinner fa-spin"></i> Encrypting audio: ${file.name}</p>`;
+            await encryptAudioToImage(decodedAudioBuffer, display);
+            
+            updatePlayButtonState();
+            saveImageBtn.disabled = false; // Enable saving the newly created image
+            
+            await tempAudioCtx.close(); // Close the temporary context
+        } catch (error) {
+            console.error("Error processing uploaded audio:", error);
+            alert("Error processing uploaded audio: " + error.message + ". Ensure it's a valid audio file (e.g., WAV, MP3).");
+            display.innerHTML = getInitialDisplayMessage();
+            // Ensure buttons are in a consistent state on error
+            updatePlayButtonState(); 
+            saveImageBtn.disabled = !display.querySelector('canvas');
+        } finally {
+            e.target.value = null; // Reset file input to allow re-uploading the same file
+        }
+      };
+
 
       playBtn.onclick = async () => {
         const canvas = display.querySelector('canvas');
         if(!canvas) { alert('No image loaded to decrypt.'); return; }
 
-        if (isPlaying) { // Handle "Stop" button click
+        if (isPlaying) { 
             resetAudioPlayer();
             playBtn.classList.remove('playing');
             playBtn.innerHTML = `<i class="fas fa-lock-open"></i> Decrypt & Play`;
             isPlaying = false;
-            updatePlayButtonState(); // Re-evaluate if "Decrypt & Play" should be enabled
+            updatePlayButtonState(); 
             return;
         }
 
-        // Handle "Decrypt & Play" button click
-        lastDecryptedBuffer = null; // Clear previous buffer before new decryption
-        saveAudioBtn.disabled = true; // Disable until new decryption is successful
+        lastDecryptedBuffer = null; 
+        saveAudioBtn.disabled = true; 
 
         try {
-            playBtn.disabled = true; // Disable button during processing
+            playBtn.disabled = true; 
             playBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Decrypting...`;
 
-            const decryptedAudioBuffer = await decryptImageToAudio(canvas); // Sets global lastDecryptedBuffer on success
-            
+            const decryptedAudioBuffer = await decryptImageToAudio(canvas); 
             const wavBlob = bufferToWav(decryptedAudioBuffer);
             
-            // Ensure previous audio source is properly cleaned up before setting a new one
-            resetAudioPlayer(); // This is a bit redundant if stop was clicked, but safe
-                                // and handles cases where player wasn't explicitly stopped.
+            resetAudioPlayer(); 
 
             audioEl.src = URL.createObjectURL(wavBlob);
-            audioEl.style.display = ''; // Show audio player
+            audioEl.style.display = ''; 
             
             await audioEl.play();
 
-            // Update UI for playing state
             isPlaying = true;
             playBtn.classList.add('playing');
             playBtn.innerHTML = `<i class="fas fa-stop"></i> Stop`;
-            playBtn.disabled = false; // Enable "Stop" button
+            playBtn.disabled = false; 
             saveAudioBtn.disabled = !lastDecryptedBuffer;
 
         } catch (error) {
             console.error("Decryption/Play error:", error);
             alert('Decryption or Playback failed: ' + error.message);
             
-            resetAudioPlayer(); // Clean up audio element on error
+            resetAudioPlayer(); 
             playBtn.classList.remove('playing');
             playBtn.innerHTML = `<i class="fas fa-lock-open"></i> Decrypt & Play`;
             isPlaying = false;
-            lastDecryptedBuffer = null; // Ensure buffer is cleared on error
+            lastDecryptedBuffer = null; 
             saveAudioBtn.disabled = true;
-            updatePlayButtonState(); // Set playBtn.disabled based on current canvas/key
+            updatePlayButtonState(); 
         }
       };
       
@@ -564,7 +615,6 @@
       };
 
       audioEl.onerror = (e) => {
-        // Don't alert if src is empty or null, which might happen during reset
         if (audioEl.getAttribute('src')) { 
              alert('Error playing audio: ' + (e.target.error ? e.target.error.message : 'Unknown error'));
         }
@@ -599,19 +649,19 @@
         }
       };
 
-      const handleFileUpload = (file) => {
-        resetAudioPlayer(); // Stop any current audio and reset player
+      const handleImageFileUpload = (file) => { // Renamed for clarity
+        resetAudioPlayer(); 
         
-        // If playback was in progress, update play button UI
         if (isPlaying) {
             playBtn.classList.remove('playing');
             playBtn.innerHTML = `<i class="fas fa-lock-open"></i> Decrypt & Play`;
             isPlaying = false;
         }
         
-        lastDecryptedBuffer = null; // Clear buffer from previous image
-        saveAudioBtn.disabled = true;   // Disable save audio for new image
-        // saveImageBtn will be enabled if image loads, playBtn by updatePlayButtonState
+        lastDecryptedBuffer = null; 
+        saveAudioBtn.disabled = true;   
+        display.innerHTML = `<p><i class="fas fa-spinner fa-spin"></i> Loading image: ${file ? file.name : ''}</p>`;
+
 
         if(file && file.type==='image/png'){
           const reader = new FileReader();
@@ -627,26 +677,31 @@
               updatePlayButtonState();
               saveImageBtn.disabled = false;
             };
-            img.onerror = () => { alert('Failed to load image. It might be corrupted or not a valid PNG.'); }
+            img.onerror = () => { 
+                alert('Failed to load image. It might be corrupted or not a valid PNG.'); 
+                display.innerHTML = getInitialDisplayMessage();
+            }
             img.src = ev.target.result;
           };
-          reader.onerror = () => { alert('Failed to read file.'); }
+          reader.onerror = () => { 
+            alert('Failed to read file.'); 
+            display.innerHTML = getInitialDisplayMessage();
+          }
           reader.readAsDataURL(file);
         } else {
-            if (file) { // Alert only if a file was selected but was of the wrong type
+            if (file) { 
                 alert('Please select a valid PNG image file.');
             }
-            // If no valid file, clear display and disable relevant buttons
-            display.innerHTML = '<p>Upload an encrypted PNG image to begin.</p>';
+            display.innerHTML = getInitialDisplayMessage();
             saveImageBtn.disabled = true;
-            updatePlayButtonState(); // This will disable playBtn if no canvas
+            updatePlayButtonState(); 
         }
       };
 
-      upload.onchange = e => {
+      imageUploadInput.onchange = e => { // Changed from 'upload' to 'imageUploadInput'
         const file = e.target.files[0];
-        handleFileUpload(file);
-        e.target.value = null; // Allow re-selection of the same file
+        handleImageFileUpload(file); // Use renamed handler
+        e.target.value = null; 
       };
 
       display.addEventListener('dragover', e => { e.preventDefault(); display.classList.add('dragover'); });
@@ -654,13 +709,30 @@
       display.addEventListener('drop', e => {
         e.preventDefault(); display.classList.remove('dragover');
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            handleFileUpload(e.dataTransfer.files[0]);
+            const file = e.dataTransfer.files[0];
+            if (file.type === 'image/png') {
+                handleImageFileUpload(file); // Use renamed handler for images
+            } else if (file.type.startsWith('audio/')) {
+                // Simulate a change event on the audioUploadInput
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                audioUploadInput.files = dataTransfer.files;
+                // Manually trigger the change event
+                const event = new Event('change', { bubbles: true });
+                audioUploadInput.dispatchEvent(event);
+            } else {
+                alert('Please drop a PNG image or an audio file.');
+            }
             e.dataTransfer.clearData();
         }
       });
+      
+      function getInitialDisplayMessage() {
+        return '<p>Enter a strong key, then record audio, upload an audio file, or upload an encrypted PNG image to begin.</p>';
+      }
 
       if(!display.querySelector('canvas')){
-        display.innerHTML = '<p>Enter a strong key, then record audio or upload an encrypted PNG image to begin.</p>';
+        display.innerHTML = getInitialDisplayMessage();
       }
       updatePlayButtonState();
     });
