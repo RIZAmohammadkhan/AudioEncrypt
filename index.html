@@ -23,6 +23,18 @@
       /* font-size will be 2em by default, adjust in media queries if needed */
     }
 
+    #error-message-area {
+      background-color: #d32f2f; /* Red for errors */
+      color: white;
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      text-align: center;
+      font-weight: bold;
+      display: none; /* Initially hidden */
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
     #controls {
       display: flex;
       flex-direction: column;
@@ -184,8 +196,6 @@
 
     /* --- Media Queries for Responsiveness --- */
 
-    /* Small devices (mobiles, landscape phones, up to 600px viewport width) */
-    /* This existing query primarily handles button layout */
     @media (max-width: 600px) {
       .button-row {
         flex-direction: column;
@@ -201,72 +211,68 @@
       }
     }
 
-    /* Extra small devices (portrait phones, less than 480px viewport width) */
-    /* Placed after max-width: 600px to override for more specific case */
     @media (max-width: 479.98px) { 
       body {
-        margin: 1rem; /* Reduce body margin */
-        padding: 0 0.5rem; /* Reduce body padding */
+        margin: 1rem; 
+        padding: 0 0.5rem; 
       }
       h1 {
-        font-size: 1.5rem; /* Smaller H1 */
+        font-size: 1.5rem; 
       }
       button, input[type="file"], input[type="password"], .upload-label {
-        font-size: 0.9rem; /* Smaller font in buttons/inputs */
-        padding: 0.4rem 0.8rem; /* Adjust padding accordingly */
+        font-size: 0.9rem; 
+        padding: 0.4rem 0.8rem; 
       }
-      .password-strength { /* Make strength indicator smaller if text wraps */
+      .password-strength { 
         font-size: 0.65rem;
         right: 0.5rem;
       }
-      input[type="password"] { /* Ensure space for smaller strength indicator */
+      input[type="password"] { 
          padding-right: 3.5rem; 
       }
       #waveform-image-display {
-        height: 200px; /* Even smaller waveform display */
+        height: 200px; 
       }
       #waveform-image-display p {
-        font-size: 0.85rem; /* Smaller placeholder text */
+        font-size: 0.85rem; 
         padding: 0.5rem;
       }
     }
 
-    /* Medium devices (tablets, 768px and up viewport width) */
     @media (min-width: 768px) {
       body {
-        max-width: 720px; /* Allow body to be a bit wider */
+        max-width: 720px; 
       }
       #waveform-image-display {
-        height: 350px; /* Larger waveform display */
+        height: 350px; 
       }
     }
 
-    /* Large devices (desktops, 992px and up viewport width) */
     @media (min-width: 992px) {
       body {
-        max-width: 900px; /* Wider body for desktops */
+        max-width: 900px; 
       }
       h1 {
-        font-size: 2.2rem; /* Slightly larger H1 for desktop */
+        font-size: 2.2rem; 
       }
       #waveform-image-display {
-        height: 400px; /* Larger waveform display */
+        height: 400px; 
       }
     }
 
-    /* Extra large devices (large desktops, 1200px and up viewport width) */
     @media (min-width: 1200px) {
       body {
-        max-width: 960px; /* Common container width for large screens */
+        max-width: 960px; 
       }
       #waveform-image-display {
-        height: 450px; /* Even larger waveform display */
+        height: 450px; 
       }
     }
   </style>
 </head>
 <body>
   <h1>🔐 Audio Encryptor / Decryptor</h1>
+  <div id="error-message-area"></div> <!-- Error display area -->
   <div id="controls">
     <div class="password-row">
       <div class="password-container">
@@ -303,6 +309,36 @@
     const HEADER_LENGTH = SALT_LENGTH + IV_LENGTH + CIPHERTEXT_LENGTH_BYTES + SAMPLE_RATE_BYTES;
     const BYTES_PER_PIXEL = 3;
 
+    let errorDisplay = null; // Will be assigned in DOMContentLoaded
+    let errorTimeout = null;
+
+    function showError(message, duration = 7000) {
+        if (errorDisplay) {
+            errorDisplay.textContent = message;
+            errorDisplay.style.display = 'block';
+            
+            if (errorTimeout) {
+                clearTimeout(errorTimeout);
+            }
+            if (duration > 0) {
+                errorTimeout = setTimeout(() => {
+                    errorDisplay.style.display = 'none';
+                    errorDisplay.textContent = '';
+                }, duration);
+            }
+        }
+    }
+
+    function clearError() {
+        if (errorDisplay) {
+            errorDisplay.style.display = 'none';
+            errorDisplay.textContent = '';
+            if (errorTimeout) {
+                clearTimeout(errorTimeout);
+                errorTimeout = null;
+            }
+        }
+    }
 
     function checkPasswordStrength(password) {
       if (password.length < 6) return { score: 0, text: 'Too Short', class: 'weak' };
@@ -341,7 +377,7 @@
       if (strength.score < 2) {
         throw new Error('Password is too weak. Use at least 8 characters with mixed case, numbers, and symbols.');
       }
-      const channelData = audioBuffer.getChannelData(0); // Assuming mono, or taking first channel
+      const channelData = audioBuffer.getChannelData(0);
       const payloadRaw = channelData.buffer;
       const originalSampleRate = audioBuffer.sampleRate;
 
@@ -426,7 +462,6 @@
       try {
         rawDecryptedAudioData = await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, cipher);
       } catch (decryptError) {
-        console.error("Decryption error details:", decryptError);
         throw new Error('Decryption failed - incorrect key or corrupted data.');
       }
 
@@ -434,13 +469,12 @@
       const ac = globalPlaybackContext || (globalPlaybackContext = new AudioContext());
       
       if (sampleRate <= 0 || sampleRate > 192000) { // Common sample rate range
-        console.warn(`Invalid sample rate ${sampleRate} detected in image, data might be corrupted.`);
         throw new Error(`Invalid sample rate (${sampleRate}Hz) in image. Data might be corrupted.`);
       }
 
       const buf = ac.createBuffer(1, floatArr.length, sampleRate);
       buf.copyToChannel(floatArr,0);
-      lastDecryptedBuffer = buf; // Set global here
+      lastDecryptedBuffer = buf;
       return buf;
     }
 
@@ -469,12 +503,14 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+      errorDisplay = document.getElementById('error-message-area'); // Assign error display element
+
       const recordBtn = document.getElementById('record-button');
-      const audioUploadInput = document.getElementById('audio-upload'); // New
+      const audioUploadInput = document.getElementById('audio-upload');
       const playBtn   = document.getElementById('play-button');
       const saveImageBtn = document.getElementById('save-image-button');
       const saveAudioBtn = document.getElementById('save-audio-button');
-      const imageUploadInput = document.getElementById('image-upload'); // Renamed for clarity
+      const imageUploadInput = document.getElementById('image-upload');
       const display   = document.getElementById('waveform-image-display');
       const audioEl   = document.getElementById('audio-player');
       const keyInput = document.getElementById('secret-key-input');
@@ -489,7 +525,7 @@
         const pass = getUserSecretKey();
         const strength = checkPasswordStrength(pass);
         const canvas = display.querySelector('canvas');
-        if (!isPlaying) { // Only modify playBtn.disabled if not currently playing
+        if (!isPlaying) {
             playBtn.disabled = !(canvas && pass && strength.score >= 2);
         }
       }
@@ -500,7 +536,7 @@
         }
         const oldSrc = audioEl.src;
         audioEl.removeAttribute('src');
-        if (audioEl.load) audioEl.load(); // Important to reset the media element state
+        if (audioEl.load) audioEl.load();
         audioEl.style.display = 'none';
         if (oldSrc && oldSrc.startsWith('blob:')) {
             URL.revokeObjectURL(oldSrc);
@@ -518,10 +554,11 @@
 
       recordBtn.onclick = async () => {
         try {
+          clearError();
           const pass = getUserSecretKey();
-          if (!pass) { alert('Please enter a secret key'); return; }
+          if (!pass) { showError('Please enter a secret key.'); return; }
           const strength = checkPasswordStrength(pass);
-          if (strength.score < 2) { alert('Password is too weak. Please use a stronger password.'); return; }
+          if (strength.score < 2) { showError('Password is too weak. Please use a stronger password.'); return; }
           
           if (recordBtn.classList.contains('recording')) {
             if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
@@ -543,19 +580,19 @@
             mediaRecorder.onstop = async () => {
               const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
               const arrayBuffer = await audioBlob.arrayBuffer();
-              const tempAudioCtx = new AudioContext(); // Use temporary context for decoding
+              const tempAudioCtx = new AudioContext();
               try {
+                clearError();
                 display.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> Encrypting recorded audio...</p>';
                 const decodedAudioBuffer = await tempAudioCtx.decodeAudioData(arrayBuffer);
                 await encryptAudioToImage(decodedAudioBuffer, display);
                 updatePlayButtonState();
                 saveImageBtn.disabled = false;
               } catch (e) {
-                console.error("Error processing recorded audio:", e);
-                alert("Error processing recorded audio: " + e.message);
-                display.innerHTML = getInitialDisplayMessage();
+                showError("Error processing recorded audio: " + e.message);
+                display.innerHTML = getInitialDisplayMessage(); // Also clears error via its internal call
               } finally {
-                await tempAudioCtx.close(); // Close the temporary context
+                await tempAudioCtx.close();
               }
             };
             mediaRecorder.start();
@@ -564,8 +601,7 @@
             display.innerHTML = '<p>Recording... Click "Stop Recording" when done.</p>';
           }
         } catch (error) {
-          console.error('Recording error:', error);
-          alert('Recording failed: ' + error.message);
+          showError('Recording failed: ' + error.message);
           recordBtn.classList.remove('recording');
           recordBtn.innerHTML = `<i class="fas fa-microphone"></i> Record`;
           if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); currentStream = null; }
@@ -576,6 +612,7 @@
 
       audioUploadInput.onchange = async (e) => {
         const file = e.target.files[0];
+        clearError();
         if (!file) {
             e.target.value = null; 
             return;
@@ -583,13 +620,13 @@
 
         const pass = getUserSecretKey();
         if (!pass) {
-            alert('Please enter a secret key before uploading audio.');
+            showError('Please enter a secret key before uploading audio.');
             e.target.value = null;
             return;
         }
         const strength = checkPasswordStrength(pass);
         if (strength.score < 2) {
-            alert('Password is too weak. Please use a stronger password.');
+            showError('Password is too weak. Please use a stronger password.');
             e.target.value = null;
             return;
         }
@@ -615,8 +652,7 @@
             
             await tempAudioCtx.close(); 
         } catch (error) {
-            console.error("Error processing uploaded audio:", error);
-            alert("Error processing uploaded audio: " + error.message + ". Ensure it's a valid audio file (e.g., WAV, MP3).");
+            showError("Error processing uploaded audio: " + error.message + ". Ensure it's a valid audio file (e.g., WAV, MP3).");
             display.innerHTML = getInitialDisplayMessage();
             updatePlayButtonState(); 
             saveImageBtn.disabled = !display.querySelector('canvas');
@@ -627,8 +663,9 @@
 
 
       playBtn.onclick = async () => {
+        clearError();
         const canvas = display.querySelector('canvas');
-        if(!canvas) { alert('No image loaded to decrypt.'); return; }
+        if(!canvas) { showError('No image loaded to decrypt.'); return; }
 
         if (isPlaying) { 
             resetAudioPlayer();
@@ -663,9 +700,7 @@
             saveAudioBtn.disabled = !lastDecryptedBuffer;
 
         } catch (error) {
-            console.error("Decryption/Play error:", error);
-            alert('Decryption or Playback failed: ' + error.message);
-            
+            showError('Decryption or Playback failed: ' + error.message);
             resetAudioPlayer(); 
             playBtn.classList.remove('playing');
             playBtn.innerHTML = `<i class="fas fa-lock-open"></i> Decrypt & Play`;
@@ -686,9 +721,8 @@
 
       audioEl.onerror = (e) => {
         if (audioEl.getAttribute('src')) { 
-             alert('Error playing audio: ' + (e.target.error ? e.target.error.message : 'Unknown error'));
+             showError('Error playing audio: ' + (e.target.error ? e.target.error.message : 'Unknown error'));
         }
-        console.error("Audio Element Error:", e.target.error);
         resetAudioPlayer();
         playBtn.classList.remove('playing');
         playBtn.innerHTML = `<i class="fas fa-lock-open"></i> Decrypt & Play`;
@@ -696,17 +730,60 @@
         updatePlayButtonState();
       };
 
-
       saveImageBtn.onclick = () => {
+        clearError();
         const canvas = display.querySelector('canvas');
-        if(!canvas) return alert('No encrypted image to save');
-        const a = document.createElement('a');
-        a.href = canvas.toDataURL('image/png');
-        a.download = 'encrypted-audio-rgb.png';
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        if (!canvas) {
+          showError('No encrypted image to save');
+          return;
+        }
+
+        const originalButtonContent = saveImageBtn.innerHTML;
+        saveImageBtn.disabled = true;
+        saveImageBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Saving...`;
+
+        const restoreButton = () => {
+          saveImageBtn.innerHTML = originalButtonContent;
+          saveImageBtn.disabled = false;
+        };
+
+        const showSuccessAndRestore = () => {
+          saveImageBtn.innerHTML = `<i class="fas fa-check"></i> Saved!`;
+          setTimeout(restoreButton, 1500);
+        };
+
+        try {
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                try {
+                  const a = document.createElement('a');
+                  a.href = URL.createObjectURL(blob);
+                  a.download = 'encrypted-audio-rgb.png';
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(a.href);
+                  showSuccessAndRestore();
+                } catch (downloadError) {
+                  showError('Error initiating download: ' + downloadError.message);
+                  restoreButton();
+                }
+              } else {
+                showError('Error saving image: Failed to generate image data.');
+                restoreButton();
+              }
+            },
+            'image/png'
+          );
+        } catch (setupError) {
+          showError('An error occurred while preparing to save the image: ' + setupError.message);
+          restoreButton();
+        }
       };
       
       saveAudioBtn.onclick = () => {
+        clearError();
         if (lastDecryptedBuffer) {
           const blobToSave = bufferToWav(lastDecryptedBuffer);
           const a = document.createElement('a');
@@ -715,11 +792,12 @@
           document.body.appendChild(a); a.click(); document.body.removeChild(a);
           URL.revokeObjectURL(a.href);
         } else {
-          alert('No decrypted audio available to save.');
+          showError('No decrypted audio available to save.');
         }
       };
 
       const handleImageFileUpload = (file) => { 
+        clearError();
         resetAudioPlayer(); 
         
         if (isPlaying) {
@@ -748,19 +826,19 @@
               saveImageBtn.disabled = false;
             };
             img.onerror = () => { 
-                alert('Failed to load image. It might be corrupted or not a valid PNG.'); 
+                showError('Failed to load image. It might be corrupted or not a valid PNG.'); 
                 display.innerHTML = getInitialDisplayMessage();
             }
             img.src = ev.target.result;
           };
           reader.onerror = () => { 
-            alert('Failed to read file.'); 
+            showError('Failed to read file.'); 
             display.innerHTML = getInitialDisplayMessage();
           }
           reader.readAsDataURL(file);
         } else {
             if (file) { 
-                alert('Please select a valid PNG image file.');
+                showError('Please select a valid PNG image file.');
             }
             display.innerHTML = getInitialDisplayMessage();
             saveImageBtn.disabled = true;
@@ -778,6 +856,7 @@
       display.addEventListener('dragleave', () => { display.classList.remove('dragover'); });
       display.addEventListener('drop', e => {
         e.preventDefault(); display.classList.remove('dragover');
+        clearError();
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             const file = e.dataTransfer.files[0];
             if (file.type === 'image/png') {
@@ -789,13 +868,14 @@
                 const event = new Event('change', { bubbles: true });
                 audioUploadInput.dispatchEvent(event);
             } else {
-                alert('Please drop a PNG image or an audio file.');
+                showError('Please drop a PNG image or an audio file.');
             }
             e.dataTransfer.clearData();
         }
       });
       
       function getInitialDisplayMessage() {
+        clearError(); // Clear any existing errors when resetting the display
         return '<p>Enter a strong key, then record audio, upload an audio file, or upload an encrypted PNG image to begin.</p>';
       }
 
