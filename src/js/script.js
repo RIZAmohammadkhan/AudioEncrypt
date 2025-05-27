@@ -575,7 +575,7 @@
       
       function getInitialDisplayMessage() {
         clearError(); // Clear any existing errors when resetting the display
-        return '<p>Enter a strong key, then record audio, upload an audio file, or upload an encrypted PNG image to begin.</p>';
+        return '<p>Enter a strong key, then record audio or upload audio, or upload an encrypted PNG image to begin.</p>';
       }
 
       if(!display.querySelector('canvas')){
